@@ -7,7 +7,6 @@ from config import (
     START_DATE, END_DATE
 )
 from cloud.bigquery import GoogleCloudClient
-from utils.data_utils import parse_date
 from utils.helpers import json_to_df
 
 @functions_framework.http
@@ -63,27 +62,33 @@ def main(request):
     return "Dados processados com sucesso", 200
 
 def define_dates(endpoint, last_execution, now):
+    # Verifica se as datas foram passadas por variável de ambiente
     if START_DATE and END_DATE:
-        start_date = parse_date(START_DATE)
-        end_date = parse_date(END_DATE)
+        start_date = START_DATE
+        end_date = END_DATE
     else:
+        # Caso contrário, usa a lógica para recuperar a última execução e ajustar as datas
         if last_execution and last_execution.get('last_extraction'):
-            start_date = parse_date(last_execution['last_extraction'])
+            start_date_dt = last_execution['last_extraction']
         else:
-            start_date = now
+            start_date_dt = now
 
-        end_date = now
+        end_date_dt = now
 
         if endpoint in ['EnvioViagensConsolidadas', 'EnvioViagensRetroativas']:
-            if now - start_date > timedelta(hours=1):
-                end_date = start_date + timedelta(hours=1)
+            if now - start_date_dt > timedelta(hours=1):
+                end_date_dt = start_date_dt + timedelta(hours=1)
             else:
                 return None, None
         elif endpoint == 'EnvioIplan':
-            if now - start_date > timedelta(minutes=5):
-                end_date = start_date + timedelta(minutes=5)
+            if now - start_date_dt > timedelta(minutes=5):
+                end_date_dt = start_date_dt + timedelta(minutes=5)
             else:
                 return None, None
+
+        start_date = start_date_dt.strftime('%Y-%m-%d %H:%M:%S')
+        end_date = end_date_dt.strftime('%Y-%m-%d %H:%M:%S')
+
 
     return start_date, end_date
 
@@ -111,7 +116,7 @@ def process_data(gps_provider, client, endpoint, logger, start_date, end_date):
             client.load_df_to_bigquery(df_results, GOOGLE_CLOUD_DATASET, table_name)
             client.update_control_table(GOOGLE_CLOUD_DATASET, GOOGLE_CLOUD_CONTROL_TABLE,
                                         ProviderEnum.ZIRIX.value, endpoint, 'success',
-                                        last_extraction=datetime.now(timezone.utc).isoformat())
+                                        last_extraction=datetime.now())
         else:
             client.update_control_table(GOOGLE_CLOUD_DATASET, GOOGLE_CLOUD_CONTROL_TABLE,
                                         ProviderEnum.ZIRIX.value, endpoint, 'failed')
