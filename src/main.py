@@ -111,7 +111,6 @@ def process_data(gps_provider, client, endpoint, logger, start_date, end_date):
     if results:
         df_results = json_to_df(results)
         if not df_results.empty:
-            df_results['ro_extraction_ts'] = datetime.now(timezone.utc)
             table_name = client.get_table_name(endpoint)
             client.load_df_to_bigquery(df_results, GOOGLE_CLOUD_DATASET, table_name)
             client.update_control_table(GOOGLE_CLOUD_DATASET, GOOGLE_CLOUD_CONTROL_TABLE,
