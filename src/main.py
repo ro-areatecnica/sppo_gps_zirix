@@ -9,6 +9,7 @@ from config import (
 from cloud.bigquery import GoogleCloudClient
 from utils.helpers import json_to_df
 
+
 @functions_framework.http
 def main(request):
     try:
@@ -61,6 +62,7 @@ def main(request):
 
     return "Dados processados com sucesso", 200
 
+
 def define_dates(endpoint, last_execution, now):
     # Verifica se as datas foram passadas por variável de ambiente
     if START_DATE and END_DATE:
@@ -89,7 +91,6 @@ def define_dates(endpoint, last_execution, now):
         start_date = start_date_dt.strftime('%Y-%m-%d %H:%M:%S')
         end_date = end_date_dt.strftime('%Y-%m-%d %H:%M:%S')
 
-
     return start_date, end_date
 
 
@@ -111,11 +112,17 @@ def process_data(gps_provider, client, endpoint, logger, start_date, end_date):
     if results:
         df_results = json_to_df(results)
         if not df_results.empty:
+            df_results['ro_extraction_ts'] = datetime.now(timezone.utc)
             table_name = client.get_table_name(endpoint)
             client.load_df_to_bigquery(df_results, GOOGLE_CLOUD_DATASET, table_name)
             client.update_control_table(GOOGLE_CLOUD_DATASET, GOOGLE_CLOUD_CONTROL_TABLE,
                                         ProviderEnum.ZIRIX.value, endpoint, 'success',
                                         last_extraction=datetime.now())
+
+            # Contar registros no BigQuery
+            total_records = client.count_records(GOOGLE_CLOUD_DATASET, table_name)
+            logger.info(f'Total de registros após carregamento: {total_records}')
+
         else:
             client.update_control_table(GOOGLE_CLOUD_DATASET, GOOGLE_CLOUD_CONTROL_TABLE,
                                         ProviderEnum.ZIRIX.value, endpoint, 'failed')
