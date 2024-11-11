@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class ProviderEnum(Enum):
     """Classe de enumeração para encapsular parâmetro de provedores de serviço de GPS
     """
-    CONECTA = "conecta"
+
     ZIRIX = "zirix"
 
 
@@ -55,6 +55,8 @@ class Provider(APIClient):
 
         response = self.get(endpoint=self.registros, params=params)
 
+        print(f"Total de registros retornados da API do enpoint REGISTROS: {len(response)}")
+
         return response
 
     def get_realocacao(self, data_hora_inicio, data_hora_fim):
@@ -76,6 +78,8 @@ class Provider(APIClient):
 
         response = self.get(endpoint=self.realocacao, params=params)
 
+        print(f"Total de registros retornados da API do enpoint REALOCACAO: {len(response)}")
+
         return response
 
     def get_viagens_consolidadas(self, data_hora_inicio, data_hora_fim):
@@ -96,5 +100,7 @@ class Provider(APIClient):
         }
 
         response = self.get(endpoint=self.consolidadas, params=params)
+
+        print(f"Total de registros retornados da API do enpoint CONSOLIDADAS: {len(response)}")
 
         return response
